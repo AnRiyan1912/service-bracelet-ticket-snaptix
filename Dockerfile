@@ -1,3 +1,4 @@
+# First stage: build the Go binary
 FROM golang:1.22.2-alpine as builder
 
 WORKDIR /app
@@ -5,12 +6,12 @@ WORKDIR /app
 # Copy go.mod and go.sum files to download dependencies
 COPY go.mod go.sum ./
 
-#Download dependency
+# Download dependencies
 RUN go mod tidy
 
 COPY . .
 
-# Build the binary and set executable permission in one step
+# Build the binary
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o main ./cmd/app/main.go && chmod +x ./main
 
 
@@ -19,14 +20,17 @@ FROM alpine:3.20.3
 
 WORKDIR /app
 
+# Install tzdata package for timezone support
+RUN apk add --no-cache tzdata
+
+# Set timezone to Asia/Jakarta
+ENV TZ=Asia/Jakarta
+
 # Copy the binary from the builder stage
 COPY --from=builder /app/main .
 
 # Copy the swagger.json file
 COPY --from=builder /app/docs/swagger.json ./docs/swagger.json
 
-#Try adding environment Variable
-ENV TZ=Asia/Jakarta
-
 # Command to run the executable
-CMD ["./main"]                    
+CMD ["./main"]

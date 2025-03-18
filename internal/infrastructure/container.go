@@ -10,6 +10,7 @@ import (
 	"bracelet-ticket-system-be/internal/config"
 	"bracelet-ticket-system-be/internal/domain"
 	"bracelet-ticket-system-be/internal/event"
+	eventbraceletticketcategory "bracelet-ticket-system-be/internal/event-bracelet-ticket-category"
 	"bracelet-ticket-system-be/internal/ticket"
 	"bracelet-ticket-system-be/pkg/xlogger"
 )
@@ -39,5 +40,6 @@ func init() {
 	mysqlTicketRepository := ticket.NewMysqlTicketRepository(db)
 	mysqlEventRepository := event.NewMysqlEventRepository(db)
 	braceletQrCodeService := braceletqrcode.BraceletQrCodeService(&cfg)
-	braceletTicketService = braceletticket.NewBraceletTicketService(mysqlBraceletTicketRepository, mysqlBraceletCategoryRepository, mysqlTicketRepository, mysqlEventRepository, braceletQrCodeService)
+	mysqlEventBraceletTicketCategoryRepository := eventbraceletticketcategory.NewMysqlEventBraceletTicketCategoryRepository(db)
+	braceletTicketService = braceletticket.NewBraceletTicketService(mysqlBraceletTicketRepository, mysqlBraceletCategoryRepository, mysqlTicketRepository, mysqlEventRepository, mysqlEventBraceletTicketCategoryRepository, braceletQrCodeService, &cfg)
 }

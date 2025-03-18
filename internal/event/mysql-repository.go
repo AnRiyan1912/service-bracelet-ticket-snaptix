@@ -16,14 +16,25 @@ func NewMysqlEventRepository(db *gorm.DB) domain.MysqlEventRepository {
 }
 
 // UpdateFolderNameBraceletTicketByEventId implements domain.MysqlEventRepository.
-func (m *mysqlEventRepository) UpdateFolderNameTotalBraceletTicketByEventId(eventId string, folderName string, totalBraceletTicket int) error {
+func (m *mysqlEventRepository) UpdateFolderNameTotalBraceletTicketByEventId(eventId string, folderName string, additionalBraceletTicket int) error {
 	logger := xlogger.Logger
 	err := m.db.Table("events").Where("id = ?", eventId).Updates(map[string]interface{}{
-		"folder_name_ bracelet_ticket": folderName,
-		"total_bracelet_ticket":        totalBraceletTicket,
+		"folder_name_bracelet_ticket": folderName,
+		"total_bracelet_ticket":       gorm.Expr("total_bracelet_ticket + ?", additionalBraceletTicket),
 	}).Error
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed to update folder name bracelet ticket by event id")
+		logger.Error().Err(err).Msg("Failed to update folder name and total bracelet ticket by event id")
+		return err
+	}
+	return nil
+}
+
+// UpdateTotalCheckInBraceletTicketByEventId implements domain.MysqlEventRepository.
+func (m *mysqlEventRepository) UpdateTotalCheckInBraceletTicketByEventId(eventId string, totalCheckInBraceletTicket int) error {
+	logger := xlogger.Logger
+	err := m.db.Table("events").Where("id = ?", eventId).Update("total_check_in_bracelet_ticket", gorm.Expr("total_check_in_bracelet_ticket + ?", totalCheckInBraceletTicket)).Error
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to update total check in bracelet ticket by event id")
 		return err
 	}
 	return nil

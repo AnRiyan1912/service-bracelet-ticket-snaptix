@@ -12,5 +12,6 @@ type Event struct {
 
 type MysqlEventRepository interface {
 	UpdateFolderNameTotalBraceletTicketByEventId(eventId string, folderName string, totalBraceletTicket int) error
+	UpdateTotalCheckInBraceletTicketByEventId(eventId string, totalCheckInBraceletTicket int) error
 	FindTotalAndTotalCheckInBraceletTicketByEventId(eventId string) (*Event, error)
 }

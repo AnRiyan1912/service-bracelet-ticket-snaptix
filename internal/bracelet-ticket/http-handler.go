@@ -10,6 +10,7 @@ import (
 
 	"bracelet-ticket-system-be/internal/domain"
 	"bracelet-ticket-system-be/internal/middleware"
+	"bracelet-ticket-system-be/pkg/xlogger"
 )
 
 type httpBraceletTicketHandler struct {
@@ -22,7 +23,27 @@ func NewHttpHandler(r fiber.Router, braceletTicketService domain.BraceletTicketS
 	}
 	r.Get("/total/:eventID", handler.GetTotalBraceletAndTotalCheckInBraceletTicketByEventID)
 	r.Get("/download-qr-code/:fileName", handler.GetBraceletTicketQrCodeFile)
-	r.Post("generate", middleware.ValidationRequest[domain.GenerateBraceletTicketReq](), handler.GenerateBraceletTicket)
+	r.Post("/generate", middleware.ValidationRequest[domain.GenerateBraceletTicketReq](), handler.GenerateBraceletTicket)
+	r.Post("/check-in", middleware.ValidationRequest[domain.CheckInBraceletTicketRequest](), handler.CheckInBraceletTicket)
+}
+
+func (h *httpBraceletTicketHandler) CheckInBraceletTicket(c *fiber.Ctx) error {
+	logger := xlogger.Logger
+	var requestBody domain.CheckInBraceletTicketRequest
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(domain.ApiResponseWithaoutData{
+			Error:   true,
+			Message: "failed to parse request body",
+		})
+	}
+	logger.Info().Msgf("CheckInBraceletTicketRequest: %v", requestBody)
+
+	response, err := h.braceletTicketService.CheckInBraceletTicket(requestBody.EventID, requestBody.QrData)
+	if err != nil {
+		return err
+	}
+
+	return c.Status(response.StatusCode).JSON(response)
 }
 
 func (h *httpBraceletTicketHandler) GetBraceletTicketQrCodeFile(c *fiber.Ctx) error {
@@ -62,8 +83,9 @@ func (h *httpBraceletTicketHandler) GenerateBraceletTicket(c *fiber.Ctx) error {
 	}()
 
 	return c.Status(fiber.StatusOK).JSON(domain.ApiResponseWithaoutData{
-		Error:   false,
-		Message: "Success generate bracelet ticket, wait a moment",
+		StatusCode: fiber.StatusOK,
+		Error:      false,
+		Message:    "Success generate bracelet ticket, wait a moment",
 	})
 }
 

@@ -3,6 +3,7 @@ package braceletticket
 import (
 	"gorm.io/gorm"
 
+	"bracelet-ticket-system-be/internal/constan"
 	"bracelet-ticket-system-be/internal/domain"
 	"bracelet-ticket-system-be/pkg/xlogger"
 )
@@ -16,10 +17,10 @@ func NewMysqlBraceletTicketRepository(db *gorm.DB) domain.MysqlBraceletTicketRep
 }
 
 // FindByBraceletTicketID implements domain.MysqlBraceletTicketRepository.
-func (m MysqlBraceletTicketRepository) FindByBraceletTicketID(id int) (*domain.BraceletTicket, error) {
+func (m MysqlBraceletTicketRepository) FindByNoTicket(noTicket string) (*domain.BraceletTicket, error) {
 	logger := xlogger.Logger
 	var braceletTicket domain.BraceletTicket
-	err := m.db.Where("id = ?", id).First(&braceletTicket).Error
+	err := m.db.Where("no_ticket = ?", noTicket).First(&braceletTicket).Error
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to find bracelet ticket")
 		return nil, err
@@ -39,12 +40,11 @@ func (m MysqlBraceletTicketRepository) InsertBraceletTicket(braceletTicket domai
 }
 
 // UpdateBraceletTicket implements domain.MysqlBraceletTicketRepository.
-func (m MysqlBraceletTicketRepository) UpdateBraceletTicket(braceletTicket domain.BraceletTicket) error {
+func (m MysqlBraceletTicketRepository) UpdateStatusById(ID string) error {
 	logger := xlogger.Logger
-	err := m.db.Save(&braceletTicket).Error
+	err := m.db.Table("bracelet_tickets").Where("id = ?", ID).Update("status", constan.CHECKED_IN).Error
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to update bracelet ticket")
-		return err
 	}
 	return nil
 }

@@ -31,7 +31,7 @@ func (b *braceletQrCodeService) GenerateBraceletQrCode(braceletQrCodeData []doma
 	if err != nil {
 		return "", fmt.Errorf("failed make folder: %v", err)
 	}
-
+	countBarcodeForName := 1
 	for _, data := range braceletQrCodeData {
 
 		dataJSON, err := json.Marshal(data)
@@ -44,13 +44,14 @@ func (b *braceletQrCodeService) GenerateBraceletQrCode(braceletQrCodeData []doma
 			return "", fmt.Errorf("failed encript the data: %v", err)
 		}
 
-		fileName := fmt.Sprintf("%s.png", data.NoTicket)
+		fileName := fmt.Sprintf("gelang-%d.png", countBarcodeForName)
 		filePath := filepath.Join(folderPath, fileName)
 
 		err = qrcode.WriteFile(encryptedData, qrcode.Medium, 1080, filePath)
 		if err != nil {
 			return "", fmt.Errorf("failed make QR Code: %v", err)
 		}
+		countBarcodeForName++
 		time.Sleep(1 * time.Second)
 	}
 

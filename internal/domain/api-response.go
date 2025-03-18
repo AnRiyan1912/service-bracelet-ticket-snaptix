@@ -7,6 +7,7 @@ type ApiResponse struct {
 }
 
 type ApiResponseWithaoutData struct {
-	Error   bool   `json:"Error"`
-	Message string `json:"Message"`
+	StatusCode int    `json:"status"`
+	Error      bool   `json:"Error"`
+	Message    string `json:"Message"`
 }

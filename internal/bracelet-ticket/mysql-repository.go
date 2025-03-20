@@ -17,10 +17,10 @@ func NewMysqlBraceletTicketRepository(db *gorm.DB) domain.MysqlBraceletTicketRep
 }
 
 // FindByBraceletTicketID implements domain.MysqlBraceletTicketRepository.
-func (m MysqlBraceletTicketRepository) FindByNoTicket(noTicket string) (*domain.BraceletTicket, error) {
+func (m MysqlBraceletTicketRepository) FindByNoTicketEncrypted(noTicket string) (*domain.BraceletTicket, error) {
 	logger := xlogger.Logger
 	var braceletTicket domain.BraceletTicket
-	err := m.db.Where("no_ticket = ?", noTicket).First(&braceletTicket).Error
+	err := m.db.Where("no_ticket_encrypted = ?", noTicket).First(&braceletTicket).Error
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to find bracelet ticket")
 		return nil, err
@@ -40,9 +40,15 @@ func (m MysqlBraceletTicketRepository) InsertBraceletTicket(braceletTicket domai
 }
 
 // UpdateBraceletTicket implements domain.MysqlBraceletTicketRepository.
-func (m MysqlBraceletTicketRepository) UpdateStatusById(ID string) error {
+func (m MysqlBraceletTicketRepository) UpdateStatusDeviceIdAndNameById(ID string, deviceID string, deviceName string) error {
 	logger := xlogger.Logger
-	err := m.db.Table("bracelet_tickets").Where("id = ?", ID).Update("status", constan.CHECKED_IN).Error
+	err := m.db.Table("bracelet_tickets").Where("id = ?", ID).Updates(
+		map[string]interface{}{
+			"status":      constan.CHECKED_IN,
+			"device_id":   deviceID,
+			"device_name": deviceName,
+		},
+	).Error
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to update bracelet ticket")
 	}

@@ -4,9 +4,9 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/joho/godotenv"
 
-	braceletqrcode "bracelet-ticket-system-be/internal/bracelet-qr-code"
 	braceletticket "bracelet-ticket-system-be/internal/bracelet-ticket"
 	braceletticketcategory "bracelet-ticket-system-be/internal/bracelet-ticket-category"
+	braceletticketexel "bracelet-ticket-system-be/internal/bracelet-ticket-exel"
 	"bracelet-ticket-system-be/internal/config"
 	"bracelet-ticket-system-be/internal/domain"
 	"bracelet-ticket-system-be/internal/event"
@@ -39,7 +39,8 @@ func init() {
 	mysqlBraceletCategoryRepository := braceletticketcategory.NewMysqlBraceletTicketCategoryRepository(db)
 	mysqlTicketRepository := ticket.NewMysqlTicketRepository(db)
 	mysqlEventRepository := event.NewMysqlEventRepository(db)
-	braceletQrCodeService := braceletqrcode.BraceletQrCodeService(&cfg)
 	mysqlEventBraceletTicketCategoryRepository := eventbraceletticketcategory.NewMysqlEventBraceletTicketCategoryRepository(db)
-	braceletTicketService = braceletticket.NewBraceletTicketService(mysqlBraceletTicketRepository, mysqlBraceletCategoryRepository, mysqlTicketRepository, mysqlEventRepository, mysqlEventBraceletTicketCategoryRepository, braceletQrCodeService, &cfg)
+	mysqlBraceletTicketExelRepository := braceletticketexel.NewMysqlBraceletTicketExelRepository(db)
+	braceletTicketExelService := braceletticketexel.NewBraceletTicketExelService(mysqlBraceletTicketExelRepository)
+	braceletTicketService = braceletticket.NewBraceletTicketService(mysqlBraceletTicketRepository, mysqlBraceletCategoryRepository, mysqlTicketRepository, mysqlEventRepository, mysqlEventBraceletTicketCategoryRepository, braceletTicketExelService, &cfg)
 }

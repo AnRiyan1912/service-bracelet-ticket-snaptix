@@ -1,12 +1,17 @@
 package utils
 
 import (
-	"strings"
-
-	"github.com/google/uuid"
+	"crypto/rand"
+	"math/big"
 )
 
-// GenerateTicketNumber membuat UUID dan mengambil 8 karakter pertama
-func GenerateTicketNumber(leng int) string {
-	return strings.ReplaceAll(uuid.New().String(), "-", "")[:leng]
+const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
+func GenerateRandomNoTicket(totalLen int) string {
+	result := make([]byte, totalLen)
+	for i := range result {
+		num, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		result[i] = charset[num.Int64()]
+	}
+	return string(result)
 }

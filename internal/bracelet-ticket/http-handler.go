@@ -22,14 +22,15 @@ func NewHttpHandler(r fiber.Router, braceletTicketService domain.BraceletTicketS
 		braceletTicketService: braceletTicketService,
 	}
 	r.Get("/total/:eventID", handler.GetTotalBraceletAndTotalCheckInBraceletTicketByEventID)
-	r.Get("/download-qr-code/:fileName", handler.GetBraceletTicketQrCodeFile)
+	r.Post("/download-exel", middleware.ValidationRequest[domain.GetBaceletTicketExelReq](), handler.GetBraceletTicketExelFile)
 	r.Post("/generate", middleware.ValidationRequest[domain.GenerateBraceletTicketReq](), handler.GenerateBraceletTicket)
-	r.Post("/check-in", middleware.ValidationRequest[domain.CheckInBraceletTicketRequest](), handler.CheckInBraceletTicket)
+	r.Post("/check-in-online", middleware.ValidationRequest[domain.CheckInBraceletTicketOnlineRequest](), handler.CheckInBraceletTicketOnline)
+	r.Post("/check-in-offline", middleware.ValidationRequest[domain.CheckInBraceletTicketOfflineRequest](), handler.CheckInBraceletTicketOffline)
 }
 
-func (h *httpBraceletTicketHandler) CheckInBraceletTicket(c *fiber.Ctx) error {
+func (h *httpBraceletTicketHandler) CheckInBraceletTicketOnline(c *fiber.Ctx) error {
 	logger := xlogger.Logger
-	var requestBody domain.CheckInBraceletTicketRequest
+	var requestBody domain.CheckInBraceletTicketOnlineRequest
 	if err := c.BodyParser(&requestBody); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(domain.ApiResponseWithaoutData{
 			Error:   true,
@@ -38,7 +39,7 @@ func (h *httpBraceletTicketHandler) CheckInBraceletTicket(c *fiber.Ctx) error {
 	}
 	logger.Info().Msgf("CheckInBraceletTicketRequest: %v", requestBody)
 
-	response, err := h.braceletTicketService.CheckInBraceletTicket(requestBody.EventID, requestBody.QrData)
+	response, err := h.braceletTicketService.CheckInBraceletTicketOnline(requestBody.EventID, requestBody.QrData, requestBody.DeviceID, requestBody.DeviceName)
 	if err != nil {
 		return err
 	}
@@ -46,20 +47,53 @@ func (h *httpBraceletTicketHandler) CheckInBraceletTicket(c *fiber.Ctx) error {
 	return c.Status(response.StatusCode).JSON(response)
 }
 
-func (h *httpBraceletTicketHandler) GetBraceletTicketQrCodeFile(c *fiber.Ctx) error {
-	fileName := c.Params("fileName")
+func (h *httpBraceletTicketHandler) CheckInBraceletTicketOffline(c *fiber.Ctx) error {
+	logger := xlogger.Logger
+	var requestBody domain.CheckInBraceletTicketOfflineRequest
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(domain.ApiResponseWithaoutData{
+			Error:   true,
+			Message: "failed to parse request body",
+		})
+	}
+	logger.Info().Msgf("CheckInBraceletTicketRequest: %v", requestBody)
 
-	if fileName == "" || filepath.Ext(fileName) != ".zip" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid file name",
+	go func() {
+		err := h.braceletTicketService.CheckInBraceletTicketOffline(requestBody.Data)
+		if err != nil {
+			log.Printf("failed to check in bracelet ticket offline: %v", err)
+		}
+	}()
+
+	return c.Status(fiber.StatusOK).JSON(domain.ApiResponseWithaoutData{
+		StatusCode: fiber.StatusOK,
+		Error:      false,
+		Message:    "Success syncronize bracelet ticket, wait a moment",
+	})
+}
+
+func (h *httpBraceletTicketHandler) GetBraceletTicketExelFile(c *fiber.Ctx) error {
+	var requestBody domain.GetBaceletTicketExelReq
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(domain.ApiResponseWithaoutData{
+			Error:   true,
+			Message: "failed to parse request body",
 		})
 	}
 
-	filePath := fmt.Sprintf("qr-code-output/%s", fileName)
-	fmt.Println(filePath)
+	if filepath.Ext(requestBody.FileName) != ".xlsx" {
+		return c.Status(fiber.StatusBadRequest).JSON(domain.ApiResponseWithaoutData{
+			Error:   true,
+			Message: "Invalid file extension",
+		})
+	}
+
+	filePath := fmt.Sprintf("folder-bracelet-ticket-exel/%s/%s", requestBody.EventID, requestBody.FileName)
+
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "File not found",
+		return c.Status(fiber.StatusNotFound).JSON(domain.ApiResponseWithaoutData{
+			Error:   true,
+			Message: "File not found",
 		})
 	}
 

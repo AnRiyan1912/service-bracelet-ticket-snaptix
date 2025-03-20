@@ -1,5 +1,5 @@
 # First stage: build the Go binary
-FROM golang:1.22.2-alpine as builder
+FROM golang:1.23.0-alpine as builder
 
 WORKDIR /app
 
@@ -29,8 +29,8 @@ ENV TZ=Asia/Jakarta
 # Copy the binary from the builder stage
 COPY --from=builder /app/main .
 
-# Copy the swagger.json file
-COPY --from=builder /app/docs/swagger.json ./docs/swagger.json
+# # Copy the swagger.json file
+# COPY --from=builder /app/docs/swagger.json ./docs/swagger.json
 
 # Command to run the executable
 CMD ["./main"]

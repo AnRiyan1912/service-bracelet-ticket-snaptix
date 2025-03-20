@@ -16,11 +16,10 @@ func NewMysqlEventRepository(db *gorm.DB) domain.MysqlEventRepository {
 }
 
 // UpdateFolderNameBraceletTicketByEventId implements domain.MysqlEventRepository.
-func (m *mysqlEventRepository) UpdateFolderNameTotalBraceletTicketByEventId(eventId string, folderName string, additionalBraceletTicket int) error {
+func (m *mysqlEventRepository) UpdateTotalBraceletTicketByEventId(eventId string, additionalBraceletTicket int) error {
 	logger := xlogger.Logger
 	err := m.db.Table("events").Where("id = ?", eventId).Updates(map[string]interface{}{
-		"folder_name_bracelet_ticket": folderName,
-		"total_bracelet_ticket":       gorm.Expr("total_bracelet_ticket + ?", additionalBraceletTicket),
+		"total_bracelet_ticket": gorm.Expr("total_bracelet_ticket + ?", additionalBraceletTicket),
 	}).Error
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to update folder name and total bracelet ticket by event id")

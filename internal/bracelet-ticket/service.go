@@ -2,8 +2,11 @@ package braceletticket
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
+
+	"gorm.io/gorm"
 
 	"bracelet-ticket-system-be/internal/config"
 	"bracelet-ticket-system-be/internal/constan"
@@ -58,6 +61,16 @@ func (b *BraceletTicketService) CheckInBraceletTicketOnline(eventId string, noTi
 			StatusCode: 404,
 			Error:      true,
 			Message:    "Bracelet ticket not found",
+		}, nil
+	}
+
+	// Check if bracelet ticket is already checked in
+	if getBraceletTicket.Status == constan.CHECKED_IN {
+		logger.Error().Msg("Bracelet ticket already checked in")
+		return &domain.ApiResponseWithaoutData{
+			StatusCode: 403,
+			Error:      true,
+			Message:    "Bracelet ticket already checked in",
 		}, nil
 	}
 
@@ -148,6 +161,116 @@ func (b *BraceletTicketService) CheckInBraceletTicketOffline(datas []domain.Chec
 	return nil
 }
 
+// CheckInBraceletTicketOnlineManual implements domain.BraceletTicketService.
+func (b *BraceletTicketService) CheckInBraceletTicketOnlineManual(eventID string, serialNumber string, deviceID string, deviceName string) (*domain.ApiResponseWithaoutData, error) {
+	logger := xlogger.Logger
+	// get bracelet ticket by serial number
+	getBraceletTicket, err := b.mysqlBraceletTicketRepository.FindBySerialNumber(serialNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if bracelet ticket is not found
+	if getBraceletTicket == nil {
+		logger.Error().Msg("Bracelet ticket not found")
+		return &domain.ApiResponseWithaoutData{
+			StatusCode: 404,
+			Error:      true,
+			Message:    "Bracelet ticket not found",
+		}, nil
+	}
+
+	// Check if bracelet ticket is already checked in
+	if getBraceletTicket.Status == constan.CHECKED_IN {
+		logger.Error().Msg("Bracelet ticket already checked in")
+		return &domain.ApiResponseWithaoutData{
+			StatusCode: 403,
+			Error:      true,
+			Message:    "Bracelet ticket already checked in",
+		}, nil
+	}
+
+	// Process decript bracelet ticket validate
+	checkValid := utils.VerifyShortCode([]byte(getBraceletTicket.NoTicket), []byte(b.cfg.EncriptionKey), getBraceletTicket.NoTicketEncrypted)
+	if !checkValid {
+		logger.Error().Err(err).Msg("Failed to decrypt bracelet ticket")
+		return &domain.ApiResponseWithaoutData{
+			StatusCode: 403,
+			Error:      true,
+			Message:    "Bracelet ticket not valid",
+		}, nil
+	}
+
+	// check if bracelet ticket is valid same with event id
+	if getBraceletTicket.EventID != eventID {
+		logger.Error().Msg("Bracelet ticket not valid with event id")
+		return &domain.ApiResponseWithaoutData{
+			StatusCode: 403,
+			Error:      true,
+			Message:    "Bracelet ticket not valid",
+		}, nil
+	}
+
+	// parse bracelet ticket session
+	var braceletTicketSessions []domain.BraceletSession
+	err = json.Unmarshal([]byte(getBraceletTicket.Sessions), &braceletTicketSessions)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to parse bracelet ticket session")
+		return nil, fmt.Errorf("Failed to parse bracelet ticket session: %w", err)
+	}
+
+	// check session bracelet ticket
+	responValidate, err := validateBracelet(braceletTicketSessions)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to validate bracelet ticket")
+		return nil, err
+	}
+	if responValidate.Error {
+		return responValidate, nil
+	}
+	// update bracelet ticket status
+	err = b.mysqlBraceletTicketRepository.UpdateStatusDeviceIdAndNameById(getBraceletTicket.ID, deviceID, deviceName)
+	if err != nil {
+		return nil, err
+	}
+
+	// update total check in bracelet ticket
+	err = b.mysqlEventRepository.UpdateTotalCheckInBraceletTicketByEventId(eventID, 1)
+	if err != nil {
+		return nil, err
+	}
+	return &domain.ApiResponseWithaoutData{
+		StatusCode: 200,
+		Error:      false,
+		Message:    "Success check in",
+	}, nil
+}
+
+// CheckInBraceletTicketOfflineManual implements domain.BraceletTicketService.
+func (b *BraceletTicketService) CheckInBraceletTicketOfflineManual(data []domain.CheckInBraceletTicketWithSerialNumberOnlineRequest) error {
+	for _, d := range data {
+		// Check in bracelet ticket online
+		// find bracelet ticket
+		getBraceletTicket, err := b.mysqlBraceletTicketRepository.FindBySerialNumber(d.SerialNumber)
+		if err != nil {
+			return err
+		}
+
+		// update bracelet ticket status
+		err = b.mysqlBraceletTicketRepository.UpdateStatusDeviceIdAndNameById(getBraceletTicket.ID, d.DeviceID, d.DeviceName)
+		if err != nil {
+			return err
+		}
+
+		// update total check in bracelet ticket
+		err = b.mysqlEventRepository.UpdateTotalCheckInBraceletTicketByEventId(d.EventID, 1)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // GenerateBraceletQrCode implements domain.BraceletTicketService.
 func (b BraceletTicketService) GenerateBraceletQrCode(eventID string, braceletCategoryId string, total int, sessions []domain.BraceletSession) error {
 
@@ -155,14 +278,29 @@ func (b BraceletTicketService) GenerateBraceletQrCode(eventID string, braceletCa
 	if err != nil {
 		return err
 	}
-	var braceletQrCodeDatas []domain.BraceletQrCodeData
-	// prosess generate qr code and save bracelet ticket to database
-	for i := 0; i < total; i++ {
-		generateNoTicket := utils.GenerateRandomNoTicket(6)
-		encriptNoTicket := utils.GenerateShortCode([]byte(generateNoTicket), []byte(b.cfg.EncriptionKey))
-		if err != nil {
+	var totalGenerate int
+	var totalStartGenerate int
+	// check bracelet ticket has been generated
+	totalLastGenerateBraceletTicket, err := b.mysqlBraceletTicketRepository.FindFirstWithLastSerialNumber(eventID)
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			totalStartGenerate = 0
+			totalGenerate = total
+
+		} else {
 			return err
 		}
+	} else {
+		totalStartGenerate = totalLastGenerateBraceletTicket
+		totalGenerate = totalLastGenerateBraceletTicket + total
+	}
+
+	var braceletQrCodeDatas []domain.BraceletQrCodeData
+	// prosess generate qr code and save bracelet ticket to database
+	for i := totalStartGenerate; i < totalGenerate; i++ {
+		generateNoTicket := utils.GenerateRandomNoTicket(6)
+		encriptNoTicket := utils.GenerateShortCode([]byte(generateNoTicket), []byte(b.cfg.EncriptionKey))
 		serialNumber := fmt.Sprintf("%0*d", len(fmt.Sprint(total)), i+1)
 		braceletQrCodeData := domain.BraceletQrCodeData{
 			No:       serialNumber,
@@ -225,19 +363,13 @@ func (b *BraceletTicketService) GetTotalBraceletAndTotalCheckInBraceletTicketByE
 	return &responTotal, nil
 }
 
-// InsertBraceletTicket implements domain.BraceletTicketService.
-func (b BraceletTicketService) InsertBraceletTicket(braceletTicket domain.BraceletTicket) error {
-	panic("unimplemented")
-}
-
-// FindByBraceletTicketID implements domain.BraceletTicketService.
-func (b BraceletTicketService) FindByBraceletTicketID(id int) (*domain.BraceletTicket, error) {
-	panic("unimplemented")
-}
-
-// UpdateBraceletTicket implements domain.BraceletTicketService.
-func (b BraceletTicketService) UpdateBraceletTicket(braceletTicket domain.BraceletTicket) error {
-	panic("unimplemented")
+// GetFileExelBaceletTicketData implements domain.BraceletTicketService.
+func (b *BraceletTicketService) GetListFileNameExelBaceletTicketByEventID(eventID string) (*[]domain.BraceletTicketExel, error) {
+	getListFileNameExel, err := b.braceletTicketExelService.GetBraceletTicketExelByEventID(eventID)
+	if err != nil {
+		return nil, err
+	}
+	return &getListFileNameExel, nil
 }
 
 func validateBracelet(sessions []domain.BraceletSession) (*domain.ApiResponseWithaoutData, error) {

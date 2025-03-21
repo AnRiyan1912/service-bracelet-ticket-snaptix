@@ -1,6 +1,8 @@
 package braceletticket
 
 import (
+	"strconv"
+
 	"gorm.io/gorm"
 
 	"bracelet-ticket-system-be/internal/constan"
@@ -53,4 +55,36 @@ func (m MysqlBraceletTicketRepository) UpdateStatusDeviceIdAndNameById(ID string
 		logger.Error().Err(err).Msg("Failed to update bracelet ticket")
 	}
 	return nil
+}
+
+// FindBySerialNumber implements domain.MysqlBraceletTicketRepository.
+func (m MysqlBraceletTicketRepository) FindBySerialNumber(serialNumber string) (*domain.BraceletTicket, error) {
+	logger := xlogger.Logger
+
+	var braceletTicket domain.BraceletTicket
+	err := m.db.Where("serial_number = ?", serialNumber).First(&braceletTicket).Error
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to find bracelet ticket by serial number")
+		return nil, err
+	}
+	return &braceletTicket, nil
+}
+
+// FindFirstWithLastSerialNumber implements domain.MysqlBraceletTicketRepository.
+func (m MysqlBraceletTicketRepository) FindFirstWithLastSerialNumber(eventID string) (int, error) {
+	logger := xlogger.Logger
+
+	var braceletTicket domain.BraceletTicket
+	err := m.db.Where("event_id = ?", eventID).Select("serial_number").Order("serial_number DESC").First(&braceletTicket).Error
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to find bracelet ticket by event id")
+		return 0, err
+	}
+
+	parseToInt, err := strconv.Atoi(braceletTicket.SerialNumber)
+	if err != nil {
+		return 0, err
+	}
+
+	return parseToInt, nil
 }

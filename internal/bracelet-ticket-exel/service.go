@@ -59,11 +59,12 @@ func (b *BraceletTicketExelService) GenerateBraceletTicketExel(datas []domain.Br
 
 	// Save to database fileName by eventID
 	braceletTicketExel := domain.BraceletTicketExel{
-		ID:        uuid.New().String(),
-		EventID:   eventID,
-		FileName:  fileName,
-		CreatedAt: utils.GetTimeNow(),
-		UpdatedAt: utils.GetTimeNow(),
+		ID:                  uuid.New().String(),
+		EventID:             eventID,
+		FileName:            fileName,
+		TotalBraceletTicket: len(datas),
+		CreatedAt:           utils.GetTimeNow(),
+		UpdatedAt:           utils.GetTimeNow(),
 	}
 
 	if err := b.mysqlBraceletTicketExelRepository.InsertBraceletTicketExel(braceletTicketExel); err != nil {
@@ -74,7 +75,7 @@ func (b *BraceletTicketExelService) GenerateBraceletTicketExel(datas []domain.Br
 
 // GetBraceletTicketExelByEventID implements domain.BraceletTicketExelService.
 func (b *BraceletTicketExelService) GetBraceletTicketExelByEventID(eventID string) ([]domain.BraceletTicketExel, error) {
-	panic("unimplemented")
+	return b.mysqlBraceletTicketExelRepository.FindByEventID(eventID)
 }
 
 // DeleteBraceletTicketExelByEventID implements domain.BraceletTicketExelService.

@@ -30,7 +30,7 @@ func (m MysqlBraceletTicketExel) InsertBraceletTicketExel(braceletTicketExel dom
 func (m MysqlBraceletTicketExel) FindByEventID(eventID string) ([]domain.BraceletTicketExel, error) {
 	logger := xlogger.Logger
 	var braceletTicketExel []domain.BraceletTicketExel
-	err := m.db.Where("event_id = ?", eventID).Find(&braceletTicketExel).Error
+	err := m.db.Where("event_id = ?", eventID).Order("created_at DESC").Find(&braceletTicketExel).Error
 	if err != nil {
 		logger.Err(err).Msg("Failed to find bracelet ticket exel by event id")
 		return nil, err

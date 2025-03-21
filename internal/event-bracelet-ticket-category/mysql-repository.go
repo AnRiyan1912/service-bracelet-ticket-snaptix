@@ -1,8 +1,6 @@
 package eventbraceletticketcategory
 
 import (
-	"fmt"
-
 	"gorm.io/gorm"
 
 	"bracelet-ticket-system-be/internal/domain"
@@ -38,7 +36,6 @@ func (m *mysqlEventBraceletTicketCategoryRepository) FindByEventIDAndCategoryID(
 		logger.Error().Err(err).Msg("Failed to find event bracelet ticket category")
 		return nil, err
 	}
-	fmt.Println(eventBraceletTicketWithCategory)
 
 	return &eventBraceletTicketWithCategory, nil
 }

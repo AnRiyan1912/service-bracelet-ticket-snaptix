@@ -26,6 +26,9 @@ func NewHttpHandler(r fiber.Router, braceletTicketService domain.BraceletTicketS
 	r.Post("/generate", middleware.ValidationRequest[domain.GenerateBraceletTicketReq](), handler.GenerateBraceletTicket)
 	r.Post("/check-in-online", middleware.ValidationRequest[domain.CheckInBraceletTicketOnlineRequest](), handler.CheckInBraceletTicketOnline)
 	r.Post("/check-in-offline", middleware.ValidationRequest[domain.CheckInBraceletTicketOfflineRequest](), handler.CheckInBraceletTicketOffline)
+	r.Get("/get-list-filename-exel/:eventID", handler.GetListFileNameBraceletTicketExelByEventID)
+	r.Post("/check-in-online-manual", middleware.ValidationRequest[domain.CheckInBraceletTicketWithSerialNumberOnlineRequest](), handler.CheckInBraceletTicketOnlineWithSerialNumber)
+	r.Post("/check-in-offline-manual", middleware.ValidationRequest[domain.CheckInBraceletTicketWithSerialNumberOfflineRequest](), handler.CheckInBraceletTicketOfflineWithSerialNumber)
 }
 
 func (h *httpBraceletTicketHandler) CheckInBraceletTicketOnline(c *fiber.Ctx) error {
@@ -61,7 +64,7 @@ func (h *httpBraceletTicketHandler) CheckInBraceletTicketOffline(c *fiber.Ctx) e
 	go func() {
 		err := h.braceletTicketService.CheckInBraceletTicketOffline(requestBody.Data)
 		if err != nil {
-			log.Printf("failed to check in bracelet ticket offline: %v", err)
+			logger.Error().Err(err).Msg("Failed to check in bracelet ticket offline")
 		}
 	}()
 
@@ -143,5 +146,72 @@ func (h *httpBraceletTicketHandler) GetTotalBraceletAndTotalCheckInBraceletTicke
 		Error:   false,
 		Message: "Success",
 		Data:    res,
+	})
+}
+
+func (h *httpBraceletTicketHandler) GetListFileNameBraceletTicketExelByEventID(c *fiber.Ctx) error {
+	eventID := c.Params("eventID")
+
+	if eventID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(&domain.ApiResponseWithaoutData{
+			StatusCode: fiber.StatusBadRequest,
+			Error:      true,
+			Message:    "Invalid event ID",
+		})
+	}
+
+	response, err := h.braceletTicketService.GetListFileNameExelBaceletTicketByEventID(eventID)
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(&domain.ApiResponse{
+		Error:   false,
+		Message: "Success",
+		Data:    response,
+	})
+}
+
+func (h *httpBraceletTicketHandler) CheckInBraceletTicketOnlineWithSerialNumber(c *fiber.Ctx) error {
+	logger := xlogger.Logger
+	var requestBody domain.CheckInBraceletTicketWithSerialNumberOnlineRequest
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(domain.ApiResponseWithaoutData{
+			Error:   true,
+			Message: "failed to parse request body",
+		})
+	}
+	logger.Info().Msgf("CheckInBraceletTicketRequest: %v", requestBody)
+
+	response, err := h.braceletTicketService.CheckInBraceletTicketOnlineManual(requestBody.EventID, requestBody.SerialNumber, requestBody.DeviceID, requestBody.DeviceName)
+	if err != nil {
+		return fmt.Errorf("failed to check in bracelet ticket online manual: %v", err)
+	}
+
+	return c.Status(response.StatusCode).JSON(response)
+}
+
+func (h *httpBraceletTicketHandler) CheckInBraceletTicketOfflineWithSerialNumber(c *fiber.Ctx) error {
+	logger := xlogger.Logger
+	var requestBody domain.CheckInBraceletTicketWithSerialNumberOfflineRequest
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(domain.ApiResponseWithaoutData{
+			Error:   true,
+			Message: "failed to parse request body",
+		})
+	}
+	logger.Info().Msgf("CheckInBraceletTicketRequest: %v", requestBody)
+
+	go func() {
+		err := h.braceletTicketService.CheckInBraceletTicketOfflineManual(requestBody.Data)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to check in bracelet ticket offline manual")
+		}
+	}()
+
+	return c.Status(fiber.StatusOK).JSON(domain.ApiResponseWithaoutData{
+		StatusCode: fiber.StatusOK,
+		Error:      false,
+		Message:    "Success syncronize bracelet ticket manual, wait a moment",
 	})
 }

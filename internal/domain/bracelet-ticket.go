@@ -41,6 +41,8 @@ type MysqlBraceletTicketRepository interface {
 	InsertBraceletTicket(braceletTicket BraceletTicket) error
 	FindByNoTicketEncrypted(noTicketEncrypted string) (*BraceletTicket, error)
 	UpdateStatusDeviceIdAndNameById(ID string, deviceID string, deviceName string) error
+	FindBySerialNumber(serialNumber string) (*BraceletTicket, error)
+	FindFirstWithLastSerialNumber(eventID string) (int, error)
 }
 
 type CheckInBraceletTicketOnlineRequest struct {
@@ -54,12 +56,23 @@ type CheckInBraceletTicketOfflineRequest struct {
 	Data []CheckInBraceletTicketOnlineRequest `json:"data" validate:"required"`
 }
 
+type CheckInBraceletTicketWithSerialNumberOnlineRequest struct {
+	EventID      string `json:"eventId" validate:"required"`
+	SerialNumber string `json:"serialNumber" validate:"required"`
+	DeviceID     string `json:"deviceId" validate:"required"`
+	DeviceName   string `json:"deviceName" validate:"required"`
+}
+
+type CheckInBraceletTicketWithSerialNumberOfflineRequest struct {
+	Data []CheckInBraceletTicketWithSerialNumberOnlineRequest `json:"data" validate:"required"`
+}
+
 type BraceletTicketService interface {
-	InsertBraceletTicket(braceletTicket BraceletTicket) error
-	FindByBraceletTicketID(id int) (*BraceletTicket, error)
-	UpdateBraceletTicket(braceletTicket BraceletTicket) error
 	CheckInBraceletTicketOnline(eventId string, qrData string, deviceId string, deviceName string) (*ApiResponseWithaoutData, error)
 	CheckInBraceletTicketOffline(data []CheckInBraceletTicketOnlineRequest) error
 	GenerateBraceletQrCode(eventID string, braceletCategoryId string, total int, sessions []BraceletSession) error
 	GetTotalBraceletAndTotalCheckInBraceletTicketByEventID(eventID string) (*GetTotalBraceletAndTotalCheckInBraceletTicketByEventIDRes, error)
+	GetListFileNameExelBaceletTicketByEventID(eventID string) (*[]BraceletTicketExel, error)
+	CheckInBraceletTicketOnlineManual(eventID string, serialNumber string, deviceID string, deviceName string) (*ApiResponseWithaoutData, error)
+	CheckInBraceletTicketOfflineManual(data []CheckInBraceletTicketWithSerialNumberOnlineRequest) error
 }

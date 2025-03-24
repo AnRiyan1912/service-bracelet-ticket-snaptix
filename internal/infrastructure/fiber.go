@@ -8,6 +8,7 @@ import (
 
 	"github.com/gofiber/contrib/fiberzerolog"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 
 	braceletticket "bracelet-ticket-system-be/internal/bracelet-ticket"
 	"bracelet-ticket-system-be/internal/middleware"
@@ -23,10 +24,19 @@ func Run() {
 		EnableTrustedProxyCheck: true,
 	})
 
+	// Middleware CORS
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,OPTIONS",
+		AllowHeaders: "Origin, Content-Type, Accept, Upgrade, Connection",
+	}))
+
 	app.Use(fiberzerolog.New(fiberzerolog.Config{
 		Logger: logger,
 		Fields: cfg.LogFields,
 	}))
+
+	runWebsocket(app, mysqlEventRepository, redisEventRepository, redisClient)
 
 	api := app.Group("/api/v1.0")
 	braceletticket.NewHttpHandler(api.Group("/bracelet-tickets"), braceletTicketService)

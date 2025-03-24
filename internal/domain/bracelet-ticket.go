@@ -41,7 +41,7 @@ type MysqlBraceletTicketRepository interface {
 	InsertBraceletTicket(braceletTicket BraceletTicket) error
 	FindByNoTicketEncrypted(noTicketEncrypted string) (*BraceletTicket, error)
 	UpdateStatusDeviceIdAndNameById(ID string, deviceID string, deviceName string) error
-	FindBySerialNumber(serialNumber string) (*BraceletTicket, error)
+	FindBySerialNumber(eventId string, serialNumber string) (*BraceletTicket, error)
 	FindFirstWithLastSerialNumber(eventID string) (int, error)
 }
 

@@ -10,8 +10,19 @@ type Event struct {
 	UpdatedAt                  string `json:"updated_at"`
 }
 
+type EventTotalBraceletAndCheckInBraceletTicket struct {
+	TotalBraceletTicket        int
+	TotalCheckInBraceletTicket int
+}
+
 type MysqlEventRepository interface {
 	UpdateTotalBraceletTicketByEventId(eventId string, totalBraceletTicket int) error
 	UpdateTotalCheckInBraceletTicketByEventId(eventId string, totalCheckInBraceletTicket int) error
 	FindTotalAndTotalCheckInBraceletTicketByEventId(eventId string) (*Event, error)
+}
+
+type RedisEventRepository interface {
+	InsertTotalAndTotalCheckInBraceletTicketByEventId(eventId string, totalBraceletTicket int, totalCheckInBraceletTicket int) error
+	FindTotalAndTotalCheckInBraceletTicketByEventId(eventId string) (*EventTotalBraceletAndCheckInBraceletTicket, error)
+	UpdateTotalCheckInBraceletTicketByEventId(eventId string, totalCheckInBraceletTicket int) error
 }

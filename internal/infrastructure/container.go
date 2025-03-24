@@ -18,6 +18,8 @@ import (
 var (
 	cfg                   config.Config
 	braceletTicketService domain.BraceletTicketService
+	mysqlEventRepository  domain.MysqlEventRepository
+	redisEventRepository  domain.RedisEventRepository
 )
 
 func init() {
@@ -35,12 +37,15 @@ func init() {
 	if db == nil {
 		xlogger.Logger.Error().Err(error).Msg("Failed connect to database!")
 	}
+	redisSetup()
+
 	mysqlBraceletTicketRepository := braceletticket.NewMysqlBraceletTicketRepository(db)
 	mysqlBraceletCategoryRepository := braceletticketcategory.NewMysqlBraceletTicketCategoryRepository(db)
 	mysqlTicketRepository := ticket.NewMysqlTicketRepository(db)
-	mysqlEventRepository := event.NewMysqlEventRepository(db)
+	mysqlEventRepository = event.NewMysqlEventRepository(db)
+	redisEventRepository = event.NewRedisEventRepository(redisClient)
 	mysqlEventBraceletTicketCategoryRepository := eventbraceletticketcategory.NewMysqlEventBraceletTicketCategoryRepository(db)
 	mysqlBraceletTicketExelRepository := braceletticketexel.NewMysqlBraceletTicketExelRepository(db)
 	braceletTicketExelService := braceletticketexel.NewBraceletTicketExelService(mysqlBraceletTicketExelRepository)
-	braceletTicketService = braceletticket.NewBraceletTicketService(mysqlBraceletTicketRepository, mysqlBraceletCategoryRepository, mysqlTicketRepository, mysqlEventRepository, mysqlEventBraceletTicketCategoryRepository, braceletTicketExelService, &cfg)
+	braceletTicketService = braceletticket.NewBraceletTicketService(mysqlBraceletTicketRepository, mysqlBraceletCategoryRepository, mysqlTicketRepository, mysqlEventRepository, mysqlEventBraceletTicketCategoryRepository, redisEventRepository, braceletTicketExelService, &cfg)
 }

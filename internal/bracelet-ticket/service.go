@@ -2,11 +2,8 @@ package braceletticket
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
-
-	"gorm.io/gorm"
 
 	"bracelet-ticket-system-be/internal/config"
 	"bracelet-ticket-system-be/internal/constan"
@@ -21,16 +18,18 @@ type BraceletTicketService struct {
 	mysqlTicketRepository                domain.MysqlTicketRepository
 	mysqlEventRepository                 domain.MysqlEventRepository
 	mysqlEventBraceletCategoryRepository domain.MysqlEventBraceletTicketCategoryRepository
+	redisEventRepository                 domain.RedisEventRepository
 	braceletTicketExelService            domain.BraceletTicketExelService
 	cfg                                  *config.Config
 }
 
-func NewBraceletTicketService(braceletTicketRepository domain.MysqlBraceletTicketRepository, mysqlBraceletCategoryRepository domain.MysqlBraceletTicketCategoryRepository, mysqlTicketRepository domain.MysqlTicketRepository, mysqlEventRepository domain.MysqlEventRepository, mysqlEventBraceletCategoryRepository domain.MysqlEventBraceletTicketCategoryRepository, braceletTicketExelService domain.BraceletTicketExelService, cfg *config.Config) domain.BraceletTicketService {
+func NewBraceletTicketService(braceletTicketRepository domain.MysqlBraceletTicketRepository, mysqlBraceletCategoryRepository domain.MysqlBraceletTicketCategoryRepository, mysqlTicketRepository domain.MysqlTicketRepository, mysqlEventRepository domain.MysqlEventRepository, mysqlEventBraceletCategoryRepository domain.MysqlEventBraceletTicketCategoryRepository, redisEventRepository domain.RedisEventRepository, braceletTicketExelService domain.BraceletTicketExelService, cfg *config.Config) domain.BraceletTicketService {
 	return &BraceletTicketService{
 		mysqlBraceletTicketRepository:   braceletTicketRepository,
 		mysqlBraceletCategoryRepository: mysqlBraceletCategoryRepository,
 		mysqlTicketRepository:           mysqlTicketRepository, mysqlEventRepository: mysqlEventRepository,
 		mysqlEventBraceletCategoryRepository: mysqlEventBraceletCategoryRepository,
+		redisEventRepository:                 redisEventRepository,
 		braceletTicketExelService:            braceletTicketExelService,
 		cfg:                                  cfg,
 	}
@@ -124,6 +123,11 @@ func (b *BraceletTicketService) CheckInBraceletTicketOnline(eventId string, noTi
 		return nil, err
 	}
 
+	// update total checkin bracelet ticket in redis for websocket
+	err = b.redisEventRepository.UpdateTotalCheckInBraceletTicketByEventId(eventId, 1)
+	if err != nil {
+		return nil, err
+	}
 	return &domain.ApiResponseWithaoutData{
 		StatusCode: 200,
 		Error:      false,
@@ -165,7 +169,7 @@ func (b *BraceletTicketService) CheckInBraceletTicketOffline(datas []domain.Chec
 func (b *BraceletTicketService) CheckInBraceletTicketOnlineManual(eventID string, serialNumber string, deviceID string, deviceName string) (*domain.ApiResponseWithaoutData, error) {
 	logger := xlogger.Logger
 	// get bracelet ticket by serial number
-	getBraceletTicket, err := b.mysqlBraceletTicketRepository.FindBySerialNumber(serialNumber)
+	getBraceletTicket, err := b.mysqlBraceletTicketRepository.FindBySerialNumber(eventID, serialNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -239,6 +243,12 @@ func (b *BraceletTicketService) CheckInBraceletTicketOnlineManual(eventID string
 	if err != nil {
 		return nil, err
 	}
+
+	// update total checkin bracelet ticket in redis for websocket
+	err = b.redisEventRepository.UpdateTotalCheckInBraceletTicketByEventId(eventID, 1)
+	if err != nil {
+		return nil, err
+	}
 	return &domain.ApiResponseWithaoutData{
 		StatusCode: 200,
 		Error:      false,
@@ -251,7 +261,7 @@ func (b *BraceletTicketService) CheckInBraceletTicketOfflineManual(data []domain
 	for _, d := range data {
 		// Check in bracelet ticket online
 		// find bracelet ticket
-		getBraceletTicket, err := b.mysqlBraceletTicketRepository.FindBySerialNumber(d.SerialNumber)
+		getBraceletTicket, err := b.mysqlBraceletTicketRepository.FindBySerialNumber(d.EventID, d.SerialNumber)
 		if err != nil {
 			return err
 		}
@@ -278,27 +288,10 @@ func (b BraceletTicketService) GenerateBraceletQrCode(eventID string, braceletCa
 	if err != nil {
 		return err
 	}
-	var totalGenerate int
-	var totalStartGenerate int
-	// check bracelet ticket has been generated
-	totalLastGenerateBraceletTicket, err := b.mysqlBraceletTicketRepository.FindFirstWithLastSerialNumber(eventID)
-
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			totalStartGenerate = 0
-			totalGenerate = total
-
-		} else {
-			return err
-		}
-	} else {
-		totalStartGenerate = totalLastGenerateBraceletTicket
-		totalGenerate = totalLastGenerateBraceletTicket + total
-	}
 
 	var braceletQrCodeDatas []domain.BraceletQrCodeData
 	// prosess generate qr code and save bracelet ticket to database
-	for i := totalStartGenerate; i < totalGenerate; i++ {
+	for i := 0; i < total; i++ {
 		generateNoTicket := utils.GenerateRandomNoTicket(6)
 		encriptNoTicket := utils.GenerateShortCode([]byte(generateNoTicket), []byte(b.cfg.EncriptionKey))
 		serialNumber := fmt.Sprintf("%0*d", len(fmt.Sprint(total)), i+1)
@@ -312,8 +305,6 @@ func (b BraceletTicketService) GenerateBraceletQrCode(eventID string, braceletCa
 		if err != nil {
 			return err
 		}
-
-		// generate serial number
 
 		// insert bracelet ticket to database
 		braceletTicket := domain.BraceletTicket{

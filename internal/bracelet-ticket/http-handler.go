@@ -79,15 +79,17 @@ func (h *httpBraceletTicketHandler) GetBraceletTicketExelFile(c *fiber.Ctx) erro
 	var requestBody domain.GetBaceletTicketExelReq
 	if err := c.BodyParser(&requestBody); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(domain.ApiResponseWithaoutData{
-			Error:   true,
-			Message: "failed to parse request body",
+			StatusCode: fiber.StatusBadRequest,
+			Error:      true,
+			Message:    "failed to parse request body",
 		})
 	}
 
 	if filepath.Ext(requestBody.FileName) != ".xlsx" {
 		return c.Status(fiber.StatusBadRequest).JSON(domain.ApiResponseWithaoutData{
-			Error:   true,
-			Message: "Invalid file extension",
+			StatusCode: fiber.StatusBadRequest,
+			Error:      true,
+			Message:    "Invalid file extension",
 		})
 	}
 
@@ -95,8 +97,9 @@ func (h *httpBraceletTicketHandler) GetBraceletTicketExelFile(c *fiber.Ctx) erro
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return c.Status(fiber.StatusNotFound).JSON(domain.ApiResponseWithaoutData{
-			Error:   true,
-			Message: "File not found",
+			StatusCode: fiber.StatusNotFound,
+			Error:      true,
+			Message:    "File not found",
 		})
 	}
 
@@ -107,8 +110,9 @@ func (h *httpBraceletTicketHandler) GenerateBraceletTicket(c *fiber.Ctx) error {
 	var requestBody domain.GenerateBraceletTicketReq
 	if err := c.BodyParser(&requestBody); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(domain.ApiResponseWithaoutData{
-			Error:   true,
-			Message: "failed to parse request body",
+			StatusCode: fiber.StatusBadRequest,
+			Error:      true,
+			Message:    "failed to parse request body",
 		})
 	}
 

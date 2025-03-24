@@ -58,11 +58,11 @@ func (m MysqlBraceletTicketRepository) UpdateStatusDeviceIdAndNameById(ID string
 }
 
 // FindBySerialNumber implements domain.MysqlBraceletTicketRepository.
-func (m MysqlBraceletTicketRepository) FindBySerialNumber(serialNumber string) (*domain.BraceletTicket, error) {
+func (m MysqlBraceletTicketRepository) FindBySerialNumber(eventId string, serialNumber string) (*domain.BraceletTicket, error) {
 	logger := xlogger.Logger
 
 	var braceletTicket domain.BraceletTicket
-	err := m.db.Where("serial_number = ?", serialNumber).First(&braceletTicket).Error
+	err := m.db.Where("event_id = ? AND serial_number = ?", eventId, serialNumber).First(&braceletTicket).Error
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to find bracelet ticket by serial number")
 		return nil, err

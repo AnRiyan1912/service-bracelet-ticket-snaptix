@@ -26,9 +26,10 @@ func Run() {
 
 	// Middleware CORS
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowMethods: "GET,POST,OPTIONS",
-		AllowHeaders: "Origin, Content-Type, Accept, Upgrade, Connection",
+		AllowOrigins:     "*",
+		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowCredentials: true,
 	}))
 
 	app.Use(fiberzerolog.New(fiberzerolog.Config{

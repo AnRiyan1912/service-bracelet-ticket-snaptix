@@ -25,7 +25,7 @@ func NewBraceletTicketExelService(mysqlBraceletTicketExelRepository domain.Mysql
 // GenerateBraceletTicketExel implements domain.BraceletTicketExelService.
 func (b *BraceletTicketExelService) GenerateBraceletTicketExel(datas []domain.BraceletQrCodeData, eventID string, fileName string) error {
 	// Make new folder for the Excel file
-	folderPath := filepath.Join("folder-bracelet-ticket-exel", eventID)
+	folderPath := filepath.Join("folder-bracelet-ticket-excel", eventID)
 	err := os.MkdirAll(folderPath, os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("Failed make the folder: %w", err)

@@ -22,7 +22,7 @@ func NewHttpHandler(r fiber.Router, braceletTicketService domain.BraceletTicketS
 		braceletTicketService: braceletTicketService,
 	}
 	r.Get("/total/:eventID", handler.GetTotalBraceletAndTotalCheckInBraceletTicketByEventID)
-	r.Post("/download-exel", middleware.ValidationRequest[domain.GetBaceletTicketExelReq](), handler.GetBraceletTicketExelFile)
+	r.Post("/download-exel", middleware.ValidationRequest[domain.GetBraceletTicketExelReq](), handler.GetBraceletTicketExcelFile)
 	r.Post("/generate", middleware.ValidationRequest[domain.GenerateBraceletTicketReq](), handler.GenerateBraceletTicket)
 	r.Post("/check-in-online", middleware.ValidationRequest[domain.CheckInBraceletTicketOnlineRequest](), handler.CheckInBraceletTicketOnline)
 	r.Post("/check-in-offline", middleware.ValidationRequest[domain.CheckInBraceletTicketOfflineRequest](), handler.CheckInBraceletTicketOffline)
@@ -75,13 +75,22 @@ func (h *httpBraceletTicketHandler) CheckInBraceletTicketOffline(c *fiber.Ctx) e
 	})
 }
 
-func (h *httpBraceletTicketHandler) GetBraceletTicketExelFile(c *fiber.Ctx) error {
-	var requestBody domain.GetBaceletTicketExelReq
+func (h *httpBraceletTicketHandler) GetBraceletTicketExcelFile(c *fiber.Ctx) error {
+	var requestBody domain.GetBraceletTicketExelReq
+
 	if err := c.BodyParser(&requestBody); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(domain.ApiResponseWithaoutData{
 			StatusCode: fiber.StatusBadRequest,
 			Error:      true,
-			Message:    "failed to parse request body",
+			Message:    "Failed to parse request body",
+		})
+	}
+
+	if requestBody.FileName == "" || requestBody.EventID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(domain.ApiResponseWithaoutData{
+			StatusCode: fiber.StatusBadRequest,
+			Error:      true,
+			Message:    "File name and event ID are required",
 		})
 	}
 
@@ -89,20 +98,33 @@ func (h *httpBraceletTicketHandler) GetBraceletTicketExelFile(c *fiber.Ctx) erro
 		return c.Status(fiber.StatusBadRequest).JSON(domain.ApiResponseWithaoutData{
 			StatusCode: fiber.StatusBadRequest,
 			Error:      true,
-			Message:    "Invalid file extension",
+			Message:    "Invalid file extension, only .xlsx files are allowed",
 		})
 	}
 
-	filePath := fmt.Sprintf("folder-bracelet-ticket-exel/%s/%s", requestBody.EventID, requestBody.FileName)
+	filePath := fmt.Sprintf("folder-bracelet-ticket-excel/%s/%s", requestBody.EventID, requestBody.FileName)
 
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return c.Status(fiber.StatusNotFound).JSON(domain.ApiResponseWithaoutData{
-			StatusCode: fiber.StatusNotFound,
+	if _, err := os.Stat(filePath); err != nil {
+		if os.IsNotExist(err) {
+			return c.Status(fiber.StatusNotFound).JSON(domain.ApiResponseWithaoutData{
+				StatusCode: fiber.StatusNotFound,
+				Error:      true,
+				Message:    "File not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(domain.ApiResponseWithaoutData{
+			StatusCode: fiber.StatusInternalServerError,
 			Error:      true,
-			Message:    "File not found",
+			Message:    "Error checking file",
 		})
 	}
 
+	// Set Content-Type agar dikenali sebagai Excel file
+	c.Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	c.Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", requestBody.FileName))
+
+	// Kirim file ke client
 	return c.SendFile(filePath)
 }
 

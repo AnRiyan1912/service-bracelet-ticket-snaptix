@@ -33,7 +33,7 @@ type GetTotalBraceletAndTotalCheckInBraceletTicketByEventIDRes struct {
 	TotalCheckIn        int `json:"totalCheckIn"`
 }
 
-type GetBaceletTicketExelReq struct {
+type GetBraceletTicketExelReq struct {
 	EventID  string `json:"eventId" validate:"required"`
 	FileName string `json:"fileName" validate:"required"`
 }

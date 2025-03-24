@@ -65,12 +65,20 @@ func (b *BraceletTicketService) CheckInBraceletTicketOnline(eventId string, noTi
 
 	// Check if bracelet ticket is already checked in
 	if getBraceletTicket.Status == constan.CHECKED_IN {
-		logger.Error().Msg("Bracelet ticket already checked in")
-		return &domain.ApiResponseWithaoutData{
-			StatusCode: 403,
-			Error:      true,
-			Message:    "Bracelet ticket already checked in",
-		}, nil
+
+		// Check max use per event
+		getMaxUseTicket, err := b.mysqlEventBraceletCategoryRepository.FindMaxUsePerEventByEventIDAndCategoryID(getBraceletTicket.EventBraceletCategoryID, eventId)
+		if err != nil {
+			return nil, err
+		}
+		if getMaxUseTicket <= getBraceletTicket.CountCheckIn {
+			logger.Error().Msg("Bracelet ticket already checked in")
+			return &domain.ApiResponseWithaoutData{
+				StatusCode: 403,
+				Error:      true,
+				Message:    "Bracelet ticket already checked in",
+			}, nil
+		}
 	}
 
 	// Process decript bracelet ticket validate
@@ -171,6 +179,14 @@ func (b *BraceletTicketService) CheckInBraceletTicketOnlineManual(eventID string
 	// get bracelet ticket by serial number
 	getBraceletTicket, err := b.mysqlBraceletTicketRepository.FindBySerialNumber(eventID, serialNumber)
 	if err != nil {
+		if err.Error() == "record not found" {
+			return &domain.ApiResponseWithaoutData{
+				StatusCode: 404,
+				Error:      true,
+				Message:    "Bracelet ticket not found",
+			}, nil
+		}
+		logger.Error().Err(err).Msg("Failed to find bracelet ticket")
 		return nil, err
 	}
 
@@ -186,12 +202,20 @@ func (b *BraceletTicketService) CheckInBraceletTicketOnlineManual(eventID string
 
 	// Check if bracelet ticket is already checked in
 	if getBraceletTicket.Status == constan.CHECKED_IN {
-		logger.Error().Msg("Bracelet ticket already checked in")
-		return &domain.ApiResponseWithaoutData{
-			StatusCode: 403,
-			Error:      true,
-			Message:    "Bracelet ticket already checked in",
-		}, nil
+
+		// Check max use per event
+		getMaxUseTicket, err := b.mysqlEventBraceletCategoryRepository.FindMaxUsePerEventByEventIDAndCategoryID(getBraceletTicket.EventBraceletCategoryID, eventID)
+		if err != nil {
+			return nil, err
+		}
+		if getMaxUseTicket <= getBraceletTicket.CountCheckIn {
+			logger.Error().Msg("Bracelet ticket already checked in")
+			return &domain.ApiResponseWithaoutData{
+				StatusCode: 403,
+				Error:      true,
+				Message:    "Bracelet ticket already checked in",
+			}, nil
+		}
 	}
 
 	// Process decript bracelet ticket validate
@@ -364,26 +388,30 @@ func (b *BraceletTicketService) GetListFileNameExelBaceletTicketByEventID(eventI
 }
 
 func validateBracelet(sessions []domain.BraceletSession) (*domain.ApiResponseWithaoutData, error) {
-	getTimeNow := time.Now()
+	// Get the current time in WIB
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+
+	// Get the current time
+	getTimeNow := time.Now().In(loc)
 	currentDate := getTimeNow.Format("2006-01-02")
 	foundValidSession := false
 
 	for _, session := range sessions {
-		startTime, err := time.Parse("2006-01-02 15:04:05", session.StartTime)
+		startTime, err := time.ParseInLocation("2006-01-02 15:04:05", session.StartTime, loc)
 		if err != nil {
 			return &domain.ApiResponseWithaoutData{StatusCode: 400, Error: true, Message: "Invalid start time format"}, nil
 		}
 
-		endTime, err := time.Parse("2006-01-02 15:04:05", session.EndTime)
+		endTime, err := time.ParseInLocation("2006-01-02 15:04:05", session.EndTime, loc)
 		if err != nil {
 			return &domain.ApiResponseWithaoutData{StatusCode: 400, Error: true, Message: "Invalid end time format"}, nil
 		}
 
-		// Check whather the session is valid for today
+		// If the current time is within the start and end time
 		if startTime.Format("2006-01-02") == currentDate {
 			foundValidSession = true
 
-			// Check whether the session is valid for the current time
+			// If the current time is before the start time
 			if getTimeNow.After(endTime) {
 				return &domain.ApiResponseWithaoutData{
 					StatusCode: 403,
@@ -393,8 +421,7 @@ func validateBracelet(sessions []domain.BraceletSession) (*domain.ApiResponseWit
 			}
 		}
 	}
-
-	// If no valid session is found
+	// Find valid session
 	if !foundValidSession {
 		return &domain.ApiResponseWithaoutData{
 			StatusCode: 403,

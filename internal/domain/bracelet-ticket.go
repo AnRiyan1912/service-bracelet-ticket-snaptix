@@ -11,6 +11,7 @@ type BraceletTicket struct {
 	NoTicketEncrypted       string `json:"no_ticket_encrypted"`
 	DeviceID                string `json:"device_id"`
 	DeviceName              string `json:"device_name"`
+	CountCheckIn            int    `json:"count_check_in"`
 	CreatedAt               string `json:"created_at"`
 	UpdatedAt               string `json:"updated_at"`
 }

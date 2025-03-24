@@ -19,4 +19,5 @@ type FindEventBraceletCategoryWithCategory struct {
 type MysqlEventBraceletTicketCategoryRepository interface {
 	InsertEventBraceletTicketCategory(eventBraceletTicketCategory EventBraceletTicketCategory) error
 	FindByEventIDAndCategoryID(eventID string, categoryID string) (*FindEventBraceletCategoryWithCategory, error)
+	FindMaxUsePerEventByEventIDAndCategoryID(ID string, eventID string) (int, error)
 }

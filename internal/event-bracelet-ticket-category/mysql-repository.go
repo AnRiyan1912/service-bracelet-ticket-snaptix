@@ -44,3 +44,24 @@ func (m *mysqlEventBraceletTicketCategoryRepository) FindByEventIDAndCategoryID(
 func (m *mysqlEventBraceletTicketCategoryRepository) InsertEventBraceletTicketCategory(eventBraceletTicketCategory domain.EventBraceletTicketCategory) error {
 	panic("unimplemented")
 }
+
+// FindMaxUsePerEventByEventIDAndCategoryID implements domain.MysqlEventBraceletTicketCategoryRepository.
+func (m *mysqlEventBraceletTicketCategoryRepository) FindMaxUsePerEventByEventIDAndCategoryID(ID string, eventID string) (int, error) {
+	logger := xlogger.Logger
+	var maxUsePerEvent int
+
+	query := `
+	SELECT 
+		max_use_per_event
+	FROM event_bracelet_categories
+	WHERE id = ? AND event_id = ?
+	LIMIT 1
+`
+
+	if err := m.db.Raw(query, ID, eventID).Scan(&maxUsePerEvent).Error; err != nil {
+		logger.Error().Err(err).Msg("Failed to find max use per event")
+		return 0, err
+	}
+
+	return maxUsePerEvent, nil
+}

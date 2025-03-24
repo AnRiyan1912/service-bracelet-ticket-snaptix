@@ -46,9 +46,10 @@ func (m MysqlBraceletTicketRepository) UpdateStatusDeviceIdAndNameById(ID string
 	logger := xlogger.Logger
 	err := m.db.Table("bracelet_tickets").Where("id = ?", ID).Updates(
 		map[string]interface{}{
-			"status":      constan.CHECKED_IN,
-			"device_id":   deviceID,
-			"device_name": deviceName,
+			"status":         constan.CHECKED_IN,
+			"device_id":      deviceID,
+			"device_name":    deviceName,
+			"count_check_in": gorm.Expr("count_check_in + ?", 1),
 		},
 	).Error
 	if err != nil {

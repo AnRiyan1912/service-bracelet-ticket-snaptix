@@ -16,8 +16,15 @@ type FindEventBraceletCategoryWithCategory struct {
 	MaxUsePerEvent    int    `json:"max_use_per_event"`
 }
 
+type FindEventBraceletCategoryWithCategoryByEventID struct {
+	ID           string `json:"id"`
+	CategoryName string `json:"category_name"`
+	MaxUse       int    `json:"max_use"`
+}
+
 type MysqlEventBraceletTicketCategoryRepository interface {
 	InsertEventBraceletTicketCategory(eventBraceletTicketCategory EventBraceletTicketCategory) error
 	FindByEventIDAndCategoryID(eventID string, categoryID string) (*FindEventBraceletCategoryWithCategory, error)
 	FindMaxUsePerEventByEventIDAndCategoryID(ID string, eventID string) (int, error)
+	FindAllByEventID(eventID string) ([]FindEventBraceletCategoryWithCategoryByEventID, error)
 }

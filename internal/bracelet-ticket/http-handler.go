@@ -29,6 +29,7 @@ func NewHttpHandler(r fiber.Router, braceletTicketService domain.BraceletTicketS
 	r.Get("/get-list-filename-exel/:eventID", handler.GetListFileNameBraceletTicketExelByEventID)
 	r.Post("/check-in-online-manual", middleware.ValidationRequest[domain.CheckInBraceletTicketWithSerialNumberOnlineRequest](), handler.CheckInBraceletTicketOnlineWithSerialNumber)
 	r.Post("/check-in-offline-manual", middleware.ValidationRequest[domain.CheckInBraceletTicketWithSerialNumberOfflineRequest](), handler.CheckInBraceletTicketOfflineWithSerialNumber)
+	r.Get("/event-bracelet-category/:eventID", handler.GetEventBaceletCategoryWithEventID)
 }
 
 func (h *httpBraceletTicketHandler) CheckInBraceletTicketOnline(c *fiber.Ctx) error {
@@ -42,7 +43,7 @@ func (h *httpBraceletTicketHandler) CheckInBraceletTicketOnline(c *fiber.Ctx) er
 	}
 	logger.Info().Msgf("CheckInBraceletTicketRequest: %v", requestBody)
 
-	response, err := h.braceletTicketService.CheckInBraceletTicketOnline(requestBody.EventID, requestBody.QrData, requestBody.DeviceID, requestBody.DeviceName)
+	response, err := h.braceletTicketService.CheckInBraceletTicketOnline(requestBody.EventID, requestBody.EventBraceletCategoryID, requestBody.QrData, requestBody.DeviceID, requestBody.DeviceName)
 	if err != nil {
 		return err
 	}
@@ -209,7 +210,7 @@ func (h *httpBraceletTicketHandler) CheckInBraceletTicketOnlineWithSerialNumber(
 	}
 	logger.Info().Msgf("CheckInBraceletTicketRequest: %v", requestBody)
 
-	response, err := h.braceletTicketService.CheckInBraceletTicketOnlineManual(requestBody.EventID, requestBody.SerialNumber, requestBody.DeviceID, requestBody.DeviceName)
+	response, err := h.braceletTicketService.CheckInBraceletTicketOnlineManual(requestBody.EventID, requestBody.EventBraceletCategoryID, requestBody.SerialNumber, requestBody.DeviceID, requestBody.DeviceName)
 	if err != nil {
 		return fmt.Errorf("failed to check in bracelet ticket online manual: %v", err)
 	}
@@ -239,5 +240,28 @@ func (h *httpBraceletTicketHandler) CheckInBraceletTicketOfflineWithSerialNumber
 		StatusCode: fiber.StatusOK,
 		Error:      false,
 		Message:    "Success syncronize bracelet ticket manual, wait a moment",
+	})
+}
+
+func (h *httpBraceletTicketHandler) GetEventBaceletCategoryWithEventID(c *fiber.Ctx) error {
+	eventID := c.Params("eventID")
+
+	if eventID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid event ID",
+		})
+	}
+
+	res, err := h.braceletTicketService.GetEventBaceletCategoryWithEventID(eventID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(domain.ApiResponse{
+		Error:   false,
+		Message: "Success",
+		Data:    res,
 	})
 }

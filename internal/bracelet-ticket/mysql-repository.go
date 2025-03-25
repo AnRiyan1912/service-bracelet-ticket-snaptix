@@ -19,10 +19,10 @@ func NewMysqlBraceletTicketRepository(db *gorm.DB) domain.MysqlBraceletTicketRep
 }
 
 // FindByBraceletTicketID implements domain.MysqlBraceletTicketRepository.
-func (m MysqlBraceletTicketRepository) FindByNoTicketEncrypted(noTicket string) (*domain.BraceletTicket, error) {
+func (m MysqlBraceletTicketRepository) FindByNoTicketEncrypted(eventID string, noTicket string, eventBraceletCategoryID string) (*domain.BraceletTicket, error) {
 	logger := xlogger.Logger
 	var braceletTicket domain.BraceletTicket
-	err := m.db.Where("no_ticket_encrypted = ?", noTicket).First(&braceletTicket).Error
+	err := m.db.Where("event_id = ? AND no_ticket_encrypted = ? AND event_bracelet_category_id = ?", eventID, noTicket, eventBraceletCategoryID).First(&braceletTicket).Error
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to find bracelet ticket")
 		return nil, err
@@ -59,11 +59,11 @@ func (m MysqlBraceletTicketRepository) UpdateStatusDeviceIdAndNameById(ID string
 }
 
 // FindBySerialNumber implements domain.MysqlBraceletTicketRepository.
-func (m MysqlBraceletTicketRepository) FindBySerialNumber(eventId string, serialNumber string) (*domain.BraceletTicket, error) {
+func (m MysqlBraceletTicketRepository) FindBySerialNumber(eventId string, serialNumber string, eventBraceletCategoryID string) (*domain.BraceletTicket, error) {
 	logger := xlogger.Logger
 
 	var braceletTicket domain.BraceletTicket
-	err := m.db.Where("event_id = ? AND serial_number = ?", eventId, serialNumber).First(&braceletTicket).Error
+	err := m.db.Where("event_id = ? AND serial_number = ? AND event_bracelet_category_id = ?", eventId, serialNumber, eventBraceletCategoryID).First(&braceletTicket).Error
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to find bracelet ticket by serial number")
 		return nil, err

@@ -65,3 +65,26 @@ func (m *mysqlEventBraceletTicketCategoryRepository) FindMaxUsePerEventByEventID
 
 	return maxUsePerEvent, nil
 }
+
+// FindAllByEventID implements domain.MysqlEventBraceletTicketCategoryRepository.
+func (m *mysqlEventBraceletTicketCategoryRepository) FindAllByEventID(eventID string) ([]domain.FindEventBraceletCategoryWithCategoryByEventID, error) {
+	logger := xlogger.Logger
+	var eventBraceletTicketWithCategory []domain.FindEventBraceletCategoryWithCategoryByEventID
+
+	query := `
+	SELECT 
+		ebc.id,
+		btc.name AS category_name,
+		ebc.max_use_per_event as max_use
+	FROM event_bracelet_categories ebc
+	JOIN bracelet_ticket_categories btc ON ebc.category_id = btc.id
+	WHERE ebc.event_id = ?
+`
+
+	if err := m.db.Raw(query, eventID).Scan(&eventBraceletTicketWithCategory).Error; err != nil {
+		logger.Error().Err(err).Msg("Failed to find event bracelet ticket category")
+		return nil, err
+	}
+
+	return eventBraceletTicketWithCategory, nil
+}

@@ -1,5 +1,5 @@
 # First stage: build the Go binary
-FROM golang:1.23.0-alpine as builder
+FROM golang:1.23.0-alpine AS builder
 
 WORKDIR /app
 

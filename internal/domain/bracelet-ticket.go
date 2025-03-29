@@ -40,18 +40,17 @@ type GetBraceletTicketExelReq struct {
 
 type MysqlBraceletTicketRepository interface {
 	InsertBraceletTicket(braceletTicket BraceletTicket) error
-	FindByNoTicketEncrypted(eventId string, noTicketEncrypted string, eventBraceletCategoryID string) (*BraceletTicket, error)
+	FindByNoTicketEncrypted(eventId string, noTicketEncrypted string) (*BraceletTicket, error)
 	UpdateStatusDeviceIdAndNameById(ID string, deviceID string, deviceName string) error
 	FindBySerialNumber(eventId string, serialNumber string, eventBraceletCategoryID string) (*BraceletTicket, error)
 	FindFirstWithLastSerialNumber(eventID string) (int, error)
 }
 
 type CheckInBraceletTicketOnlineRequest struct {
-	EventID                 string `json:"eventId" validate:"required"`
-	EventBraceletCategoryID string `json:"eventBraceletCategoryID" validate:"required"`
-	QrData                  string `json:"qrData" validate:"required"`
-	DeviceID                string `json:"deviceId" validate:"required"`
-	DeviceName              string `json:"deviceName" validate:"required"`
+	EventID    string `json:"eventId" validate:"required"`
+	QrData     string `json:"qrData" validate:"required"`
+	DeviceID   string `json:"deviceId" validate:"required"`
+	DeviceName string `json:"deviceName" validate:"required"`
 }
 
 type CheckInBraceletTicketOfflineRequest struct {
@@ -71,7 +70,7 @@ type CheckInBraceletTicketWithSerialNumberOfflineRequest struct {
 }
 
 type BraceletTicketService interface {
-	CheckInBraceletTicketOnline(eventId string, eventBraceletCategoryID string, qrData string, deviceId string, deviceName string) (*ApiResponseWithaoutData, error)
+	CheckInBraceletTicketOnline(eventId string, qrData string, deviceId string, deviceName string) (*ApiResponseWithaoutData, error)
 	CheckInBraceletTicketOffline(data []CheckInBraceletTicketOnlineRequest) error
 	GenerateBraceletQrCode(eventID string, braceletCategoryId string, total int, sessions []BraceletSession) error
 	GetTotalBraceletAndTotalCheckInBraceletTicketByEventID(eventID string) (*GetTotalBraceletAndTotalCheckInBraceletTicketByEventIDRes, error)

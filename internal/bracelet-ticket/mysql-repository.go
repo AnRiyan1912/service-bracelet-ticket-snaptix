@@ -19,10 +19,10 @@ func NewMysqlBraceletTicketRepository(db *gorm.DB) domain.MysqlBraceletTicketRep
 }
 
 // FindByBraceletTicketID implements domain.MysqlBraceletTicketRepository.
-func (m MysqlBraceletTicketRepository) FindByNoTicketEncrypted(eventID string, noTicket string, eventBraceletCategoryID string) (*domain.BraceletTicket, error) {
+func (m MysqlBraceletTicketRepository) FindByNoTicketEncrypted(eventID string, noTicket string) (*domain.BraceletTicket, error) {
 	logger := xlogger.Logger
 	var braceletTicket domain.BraceletTicket
-	err := m.db.Where("event_id = ? AND no_ticket_encrypted = ? AND event_bracelet_category_id = ?", eventID, noTicket, eventBraceletCategoryID).First(&braceletTicket).Error
+	err := m.db.Where("event_id = ? AND no_ticket_encrypted = ? AND event_bracelet_category_id = ?", eventID, noTicket).First(&braceletTicket).Error
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to find bracelet ticket")
 		return nil, err

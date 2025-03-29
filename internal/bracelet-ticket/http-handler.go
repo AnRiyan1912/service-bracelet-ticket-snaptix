@@ -43,7 +43,7 @@ func (h *httpBraceletTicketHandler) CheckInBraceletTicketOnline(c *fiber.Ctx) er
 	}
 	logger.Info().Msgf("CheckInBraceletTicketRequest: %v", requestBody)
 
-	response, err := h.braceletTicketService.CheckInBraceletTicketOnline(requestBody.EventID, requestBody.EventBraceletCategoryID, requestBody.QrData, requestBody.DeviceID, requestBody.DeviceName)
+	response, err := h.braceletTicketService.CheckInBraceletTicketOnline(requestBody.EventID, requestBody.QrData, requestBody.DeviceID, requestBody.DeviceName)
 	if err != nil {
 		return err
 	}

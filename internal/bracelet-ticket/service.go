@@ -36,11 +36,11 @@ func NewBraceletTicketService(braceletTicketRepository domain.MysqlBraceletTicke
 }
 
 // CheckInBraceletTicket implements domain.BraceletTicketService.
-func (b *BraceletTicketService) CheckInBraceletTicketOnline(eventId string, eventBraceletCategoryID string, noTicketEncrypted string, deviceId string, deviceName string) (*domain.ApiResponseWithaoutData, error) {
+func (b *BraceletTicketService) CheckInBraceletTicketOnline(eventId string, noTicketEncrypted string, deviceId string, deviceName string) (*domain.ApiResponseWithaoutData, error) {
 	logger := xlogger.Logger
 
 	// Find bracelet ticket
-	getBraceletTicket, err := b.mysqlBraceletTicketRepository.FindByNoTicketEncrypted(eventId, noTicketEncrypted, eventBraceletCategoryID)
+	getBraceletTicket, err := b.mysqlBraceletTicketRepository.FindByNoTicketEncrypted(eventId, noTicketEncrypted)
 	if err != nil {
 		if err.Error() == "record not found" {
 			return &domain.ApiResponseWithaoutData{
@@ -150,7 +150,7 @@ func (b *BraceletTicketService) CheckInBraceletTicketOffline(datas []domain.Chec
 	for _, data := range datas {
 		// Check in bracelet ticket online
 		// find bracelet ticket
-		getBraceletTicket, err := b.mysqlBraceletTicketRepository.FindByNoTicketEncrypted(data.EventID, data.QrData, data.EventBraceletCategoryID)
+		getBraceletTicket, err := b.mysqlBraceletTicketRepository.FindByNoTicketEncrypted(data.EventID, data.QrData)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to find bracelet ticket")
 			return err
